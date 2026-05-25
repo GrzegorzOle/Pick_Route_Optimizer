@@ -2,6 +2,8 @@
 
 This repository contains two related projects that work together to generate a distance matrix for a warehouse layout and to serve an API that can compute optimal picking routes.
 
+![Warehouse layout](Img/magazyn.jpeg)
+
 ## Projects
 
 ### `MAP_Generator`
