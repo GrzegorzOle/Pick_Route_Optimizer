@@ -102,8 +102,7 @@ jobs:
       - name: Smoke-test the server (Linux)
         if: runner.os == 'Linux'
         run: |
-          cd publish
-          ASPNETCORE_URLS=http://localhost:5252 ./WarehouseRouteApi &
+          ASPNETCORE_URLS=http://localhost:5252 ./publish/WarehouseRouteApi > server.log 2>&1 &
           pid=$!
           ok=
           for i in $(seq 1 60); do
@@ -111,7 +110,7 @@ jobs:
             sleep 1
           done
           kill $pid 2>/dev/null || true
-          test "$ok" = "1" || { echo "server did not respond"; exit 1; }
+          if [ "$ok" != "1" ]; then echo "=== server.log ==="; cat server.log; echo "server did not respond"; exit 1; fi
           echo "server responded OK"
 
       - name: Smoke-test the server (Windows)
@@ -119,14 +118,20 @@ jobs:
         shell: pwsh
         run: |
           $env:ASPNETCORE_URLS = "http://localhost:5252"
-          $p = Start-Process -FilePath publish\WarehouseRouteApi.exe -PassThru
+          $exe = Resolve-Path "publish\WarehouseRouteApi.exe"
+          $p = Start-Process -FilePath $exe -WorkingDirectory publish -PassThru `
+                 -RedirectStandardOutput server.out.log -RedirectStandardError server.err.log
           $ok = $false
           for ($i = 0; $i -lt 60; $i++) {
             try { Invoke-WebRequest -UseBasicParsing http://localhost:5252/api/route/locations -TimeoutSec 3 | Out-Null; $ok = $true; break }
             catch { Start-Sleep -Seconds 1 }
           }
           Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-          if (-not $ok) { throw "server did not respond" }
+          if (-not $ok) {
+            if (Test-Path server.out.log) { Write-Host "=== stdout ==="; Get-Content server.out.log }
+            if (Test-Path server.err.log) { Write-Host "=== stderr ==="; Get-Content server.err.log }
+            throw "server did not respond"
+          }
           echo "server responded OK"
 
       - name: Zip the package (Linux)
