@@ -9,7 +9,18 @@ This editor makes the connections clickable and re-checks reachability after eve
 
 ![The editor with a cut-off location highlighted in red](../Img/map_editor.png)
 
-## Running it
+## Download (no Python needed)
+
+Grab a ready-to-run build from the [Releases page](../../releases) — a single self-contained
+file with Python and Tkinter bundled inside. Nothing to install.
+
+- **Windows:** `MapEditor-windows.exe` — double-click to run.
+- **Linux:** `MapEditor-linux` — `chmod +x MapEditor-linux` then `./MapEditor-linux`.
+
+Each build ships with a sample warehouse map, so it opens ready to edit; use **Open** to load
+your own `Magazyn.txt`.
+
+## Running it from source
 
 ```bash
 cd MAP_Editor
@@ -61,11 +72,34 @@ at all, and asking the API for `U85` returns "outside the warehouse". Open the m
 bottom-right slot is flagged amber; double-click it, rename to `U85`, then Save (or Generate
 JSON) to fix both the text file and the distance matrix.
 
+## Packaging a release
+
+Builds are produced by [`.github/workflows/release.yml`](../.github/workflows/release.yml).
+Push a version tag and it builds the Windows and Linux executables on their own runners
+(PyInstaller can't cross-compile), smoke-tests each, and publishes a GitHub Release:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+You can also run the workflow manually from the Actions tab to build and test without
+releasing. To build locally on your own machine:
+
+```bash
+cd MAP_Editor
+pip install pyinstaller
+pyinstaller --clean --noconfirm editor.spec   # produces dist/MapEditor(.exe)
+./dist/MapEditor --selftest                    # headless check: loads the bundled map
+```
+
 ## Files
 
 - `warehouse_map.py` — the graph model: parsing, editing, connectivity, grid export and JSON
   generation. No GUI; this is what the tests drive.
-- `editor.py` — the Tkinter interface.
+- `editor.py` — the Tkinter interface. `--selftest` loads the bundled map and exits (used to
+  smoke-test packaged builds without a display).
+- `editor.spec` — PyInstaller recipe for the one-file, self-contained executable.
 - `test_warehouse_map.py` — checks the model against the real `Magazyn.txt`: that the grid
   round-trips, that the distance matrix **equals** what `export.py` writes (and what it would
   write from a file the editor saved), and that off-grid edits, renames and new rows behave.

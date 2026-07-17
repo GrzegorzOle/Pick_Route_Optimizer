@@ -1,0 +1,98 @@
+name: Release MAP Editor
+
+# Builds the self-contained Warehouse Map Editor for Linux and Windows on their own
+# runners (PyInstaller cannot cross-compile) and publishes a GitHub Release with both.
+#
+# Cut a release by pushing a tag:   git tag v1.0.0 && git push origin v1.0.0
+# Or run manually from the Actions tab (workflow_dispatch) to build+test without releasing.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: MapEditor-linux
+            binary: MapEditor
+          - os: windows-latest
+            artifact: MapEditor-windows.exe
+            binary: MapEditor.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: MAP_Editor
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify Tkinter is bundled-in-able
+        run: python -c "import tkinter, tkinter.font; print('tkinter OK')"
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Run model tests
+        run: python test_warehouse_map.py
+
+      - name: Build one-file executable
+        run: pyinstaller --clean --noconfirm editor.spec
+
+      # A windowed build has no stdout on Windows, so --selftest also writes the result to a
+      # file; we check that file plus the exit code. Start-Process -Wait is required because
+      # the shell does not block on a GUI-subsystem exe by default.
+      - name: Smoke-test the executable (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          ./dist/MapEditor --selftest result.txt
+          cat result.txt
+          grep -q "SELFTEST OK" result.txt
+
+      - name: Smoke-test the executable (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\MapEditor.exe -ArgumentList '--selftest','result.txt' -Wait -PassThru
+          Get-Content result.txt
+          if ($p.ExitCode -ne 0) { throw "selftest exit code $($p.ExitCode)" }
+          if (-not (Select-String -Path result.txt -Pattern 'SELFTEST OK' -Quiet)) { throw "selftest did not report OK" }
+
+      - name: Name the artifact per OS
+        shell: bash
+        run: mv "dist/${{ matrix.binary }}" "dist/${{ matrix.artifact }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: MAP_Editor/dist/${{ matrix.artifact }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List collected artifacts
+        run: ls -R artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**
+          generate_release_notes: true
+          fail_on_unmatched_files: true

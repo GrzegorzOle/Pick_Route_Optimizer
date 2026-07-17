@@ -22,9 +22,19 @@ from tkinter import font as tkfont, filedialog, messagebox, simpledialog, ttk
 
 from warehouse_map import GridExportError, MapFormatError, WarehouseMap
 
-HERE = Path(__file__).resolve().parent
-DEFAULT_MAP = HERE.parent / "MAP_Generator" / "Magazyn.txt"
-API_DIR = HERE.parent / "WarehouseRouteApi" / "WarehouseRouteApi"
+# A PyInstaller one-file build unpacks to a temp dir (sys._MEIPASS), so the sample map
+# ships inside the bundle and the repo-relative paths only exist when running from source.
+FROZEN = getattr(sys, "frozen", False)
+if FROZEN:
+    BUNDLE = Path(sys._MEIPASS)
+    DEFAULT_MAP = BUNDLE / "Magazyn.txt"
+    API_DIR = Path("__no_api_in_standalone_build__")
+    DIALOG_DIR = Path.home()
+else:
+    HERE = Path(__file__).resolve().parent
+    DEFAULT_MAP = HERE.parent / "MAP_Generator" / "Magazyn.txt"
+    API_DIR = HERE.parent / "WarehouseRouteApi" / "WarehouseRouteApi"
+    DIALOG_DIR = DEFAULT_MAP.parent if DEFAULT_MAP.exists() else Path.home()
 
 MARGIN = 56
 ZOOMS = [0.45, 0.6, 0.8, 1.0, 1.4]
@@ -575,7 +585,7 @@ class EditorApp:
             return
         path = filedialog.askopenfilename(
             title="Open warehouse map",
-            initialdir=str(DEFAULT_MAP.parent if DEFAULT_MAP.exists() else HERE),
+            initialdir=str(DIALOG_DIR),
             filetypes=[("Warehouse map", "*.txt"), ("All files", "*.*")])
         if path:
             self.load(path)
@@ -611,7 +621,7 @@ class EditorApp:
             return
         path = filedialog.asksaveasfilename(
             title="Save warehouse map", defaultextension=".txt",
-            initialdir=str(self.path.parent if self.path else HERE),
+            initialdir=str(self.path.parent if self.path else DIALOG_DIR),
             initialfile=self.path.name if self.path else "Magazyn.txt",
             filetypes=[("Warehouse map", "*.txt"), ("All files", "*.*")])
         if path:
@@ -631,7 +641,7 @@ class EditorApp:
             return
         target = filedialog.asksaveasfilename(
             title="Generate distance map", defaultextension=".json",
-            initialdir=str(DEFAULT_MAP.parent), initialfile="mapa_odleglosci.json",
+            initialdir=str(DIALOG_DIR), initialfile="mapa_odleglosci.json",
             filetypes=[("Distance map", "*.json")])
         if not target:
             return
@@ -688,8 +698,31 @@ class EditorApp:
             self.root.destroy()
 
 
+def selftest(outfile=None):
+    """Headless check that a packaged build can find its data and load a map.
+
+    Exercises the bundled sample map, the warehouse_map import and path resolution
+    without opening a window, so the release workflow can smoke-test the executable on a
+    runner with no display. A windowed (console=False) build has no stdout on Windows, so
+    the result is also written to outfile when given — that is what CI actually reads."""
+    if DEFAULT_MAP.exists():
+        wmap = WarehouseMap.load(DEFAULT_MAP)
+        msg = f"SELFTEST OK: loaded {DEFAULT_MAP.name}, {wmap.n_nodes} locations, grid={wmap.is_grid()}"
+        code = 0
+    else:
+        msg = f"SELFTEST FAILED: bundled map not found at {DEFAULT_MAP}"
+        code = 1
+    print(msg)
+    if outfile:
+        Path(outfile).write_text(msg + "\n", encoding="utf-8")
+    return code
+
+
 def main():
-    path = sys.argv[1] if len(sys.argv) > 1 else None
+    args = [a for a in sys.argv[1:] if a]
+    if args and args[0] in ("--selftest", "--check"):
+        sys.exit(selftest(args[1] if len(args) > 1 else None))
+    path = args[0] if args else None
     root = tk.Tk()
     try:
         ttk.Style().theme_use("clam")
