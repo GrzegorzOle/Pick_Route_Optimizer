@@ -4,6 +4,17 @@ This repository contains two related projects that work together to generate a d
 
 ![Warehouse layout](Img/magazyn.jpeg)
 
+## Downloads
+
+Ready-to-run, self-contained builds are on the **[Releases page](https://github.com/GrzegorzOle/Pick_Route_Optimizer/releases/latest)** — each has its runtime bundled inside, so there is nothing to install.
+
+| Component | Windows | Linux |
+|-----------|---------|-------|
+| **Route API server** | [WarehouseRouteApi-windows-x64.zip](https://github.com/GrzegorzOle/Pick_Route_Optimizer/releases/latest/download/WarehouseRouteApi-windows-x64.zip) | [WarehouseRouteApi-linux-x64.zip](https://github.com/GrzegorzOle/Pick_Route_Optimizer/releases/latest/download/WarehouseRouteApi-linux-x64.zip) |
+| **Map editor** | [MapEditor-windows.exe](https://github.com/GrzegorzOle/Pick_Route_Optimizer/releases/latest/download/MapEditor-windows.exe) | [MapEditor-linux](https://github.com/GrzegorzOle/Pick_Route_Optimizer/releases/latest/download/MapEditor-linux) |
+
+The server zip contains the executable plus `mapa_odleglosci.json`; unzip and run the executable (see [`WarehouseRouteApi/readme.md`](WarehouseRouteApi/readme.md)). The map editor is a single file — run it directly (see [`MAP_Editor/README.md`](MAP_Editor/README.md)). These builds are produced automatically by [`.github/workflows/release.yml`](.github/workflows/release.yml) on every `v*` tag.
+
 ## Projects
 
 ### `MAP_Generator`
