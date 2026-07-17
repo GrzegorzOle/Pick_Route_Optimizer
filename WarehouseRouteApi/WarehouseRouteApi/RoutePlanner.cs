@@ -2,6 +2,11 @@
 
 public class RoutePlanner
 {
+    /// <summary>Cost used when two locations have no known connection in the matrix.</summary>
+    public const int MissingEdgeCost = 9999;
+
+    private const int DefaultFirstSolutionStrategy = 3;
+
     private readonly WarehouseGraph graph;
 
     public RoutePlanner(WarehouseGraph graph)
@@ -42,27 +47,28 @@ public class RoutePlanner
         return ConvertRouteToResult(bestRoute);
     }
 
-    // OR-Tools - explicit start and stop in RoutingIndexManager
-    public List<(string Location, int Distance)> FindOptimalRouteORToolsWithEnd(
+    /// <summary>
+    /// Returns the visit order (including start and stop) for the given locations.
+    /// </summary>
+    public List<string> FindOptimalRouteORToolsWithEnd(
     List<string> all, string start, string stop, int searchMetaheuristic = 3)
     {
         int n = all.Count;
         int[,] distances = new int[n, n];
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++)
-                distances[i, j] = i == j ? 0 : graph.DistanceMatrix[all[i]].GetValueOrDefault(all[j], 9999);
+                distances[i, j] = i == j ? 0 : graph.DistanceMatrix[all[i]].GetValueOrDefault(all[j], MissingEdgeCost);
 
-        int startIdx = 0;
+        int startIdx = all.IndexOf(start);
         int stopIdx = all.IndexOf(stop);
 
         if (startIdx == -1 || stopIdx == -1)
         {
             Console.WriteLine($"Error: start ({start}) or stop ({stop}) not found in the location list.");
-            return new List<(string, int)>();
+            return new List<string>();
         }
 
-        // var manager = new RoutingIndexManager(n, 1, startIdx, new[] { stopIdx }); // Start/stop
-        RoutingIndexManager manager = null;
+        RoutingIndexManager manager;
         try
         {
             manager = new RoutingIndexManager(n, 1, new[] { startIdx }, new[] { stopIdx });
@@ -70,7 +76,7 @@ public class RoutePlanner
         catch (Exception ex)
         {
             Console.WriteLine($"Error while creating RoutingIndexManager: {ex.Message}");
-            return new List<(string, int)>();
+            return new List<string>();
         }
 
         RoutingModel routing = new RoutingModel(manager);
@@ -87,9 +93,9 @@ public class RoutePlanner
 
         var searchParams = operations_research_constraint_solver.DefaultRoutingSearchParameters();
         searchParams.FirstSolutionStrategy = FirstSolutionStrategy.Types.Value.Savings;
-        if (searchMetaheuristic < 0 || searchMetaheuristic > 17 || searchMetaheuristic == null)
+        if (searchMetaheuristic < 0 || searchMetaheuristic > 17)
         {
-            searchMetaheuristic = 3; // Default: SimulatedAnnealing
+            searchMetaheuristic = DefaultFirstSolutionStrategy; // PathCheapestArc
         }
 
         switch (searchMetaheuristic)
@@ -155,20 +161,18 @@ public class RoutePlanner
 
         var solution = routing.SolveWithParameters(searchParams);
 
-        var result = new List<(string, int)>();
+        var order = new List<string>();
         if (solution != null)
         {
             long idx = routing.Start(0);
             while (!routing.IsEnd(idx))
             {
-                int node = manager.IndexToNode(idx);
-                int nextNode = manager.IndexToNode(solution.Value(routing.NextVar(idx)));
-                result.Add((all[node], distances[node, nextNode]));
+                order.Add(all[manager.IndexToNode(idx)]);
                 idx = solution.Value(routing.NextVar(idx));
             }
-            result.Add((all[stopIdx], 0));
+            order.Add(all[stopIdx]);
         }
-        return result;
+        return order;
     }
 
 
@@ -180,7 +184,7 @@ public class RoutePlanner
 
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++)
-                distances[i, j] = i == j ? 0 : graph.DistanceMatrix[locs[i]].GetValueOrDefault(locs[j], 9999);
+                distances[i, j] = i == j ? 0 : graph.DistanceMatrix[locs[i]].GetValueOrDefault(locs[j], MissingEdgeCost);
 
         var manager = new RoutingIndexManager(n, 1, 0);
         var routing = new RoutingModel(manager);
@@ -226,7 +230,7 @@ public class RoutePlanner
         {
             var from = route[i];
             var to = route[i + 1];
-            totalDistance += graph.DistanceMatrix[from].GetValueOrDefault(to, 9999);
+            totalDistance += graph.DistanceMatrix[from].GetValueOrDefault(to, MissingEdgeCost);
         }
         return totalDistance;
     }
@@ -238,7 +242,7 @@ public class RoutePlanner
         {
             var from = route[i];
             var to = route[i + 1];
-            var distance = graph.DistanceMatrix[from].GetValueOrDefault(to, 9999);
+            var distance = graph.DistanceMatrix[from].GetValueOrDefault(to, MissingEdgeCost);
             result.Add((from, distance));
         }
         if (route.Count > 0)
