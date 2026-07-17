@@ -22,6 +22,10 @@ from tkinter import font as tkfont, filedialog, messagebox, simpledialog, ttk
 
 from warehouse_map import GridExportError, MapFormatError, WarehouseMap
 
+# Default version; the release workflow overwrites this line with the git tag at build time,
+# so a packaged build reports the release it came from.
+__version__ = "1.1.0"
+
 # A PyInstaller one-file build unpacks to a temp dir (sys._MEIPASS), so the sample map
 # ships inside the bundle and the repo-relative paths only exist when running from source.
 FROZEN = getattr(sys, "frozen", False)
@@ -720,6 +724,9 @@ def selftest(outfile=None):
 
 def main():
     args = [a for a in sys.argv[1:] if a]
+    if args and args[0] in ("--version", "-V"):
+        print(f"MAP Editor {__version__}")
+        return
     if args and args[0] in ("--selftest", "--check"):
         sys.exit(selftest(args[1] if len(args) > 1 else None))
     path = args[0] if args else None

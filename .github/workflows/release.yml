@@ -43,6 +43,19 @@ jobs:
         run: python -m pip install --upgrade pip pyinstaller
       - name: Run model tests
         run: python test_warehouse_map.py
+      - name: Stamp version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          python - "$ver" <<'PY'
+          import re, sys
+          ver = sys.argv[1]
+          s = open("editor.py", encoding="utf-8").read()
+          s = re.sub(r'__version__ = "[^"]*"', f'__version__ = "{ver}"', s, count=1)
+          open("editor.py", "w", encoding="utf-8").write(s)
+          print("stamped editor.py ->", ver)
+          PY
       - name: Build one-file executable
         run: pyinstaller --clean --noconfirm editor.spec
       # A windowed build has no stdout on Windows, so --selftest also writes to a file; we
@@ -93,10 +106,14 @@ jobs:
       - name: Publish self-contained single-file server
         shell: bash
         run: |
+          ver="1.1.0"
+          case "$GITHUB_REF" in refs/tags/v*) ver="${GITHUB_REF_NAME#v}" ;; esac
+          echo "Building version $ver"
           dotnet publish WarehouseRouteApi/WarehouseRouteApi/WarehouseRouteApi.csproj \
             -c Release -r ${{ matrix.rid }} --self-contained true \
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:DebugType=None -p:DebugSymbols=false \
+            -p:Version="$ver" \
             -o publish
 
       - name: Smoke-test the server (Linux)

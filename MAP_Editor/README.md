@@ -97,8 +97,8 @@ pyinstaller --clean --noconfirm editor.spec   # produces dist/MapEditor(.exe)
 
 - `warehouse_map.py` — the graph model: parsing, editing, connectivity, grid export and JSON
   generation. No GUI; this is what the tests drive.
-- `editor.py` — the Tkinter interface. `--selftest` loads the bundled map and exits (used to
-  smoke-test packaged builds without a display).
+- `editor.py` — the Tkinter interface. `--version` prints the version; `--selftest` loads the
+  bundled map and exits (used to smoke-test packaged builds without a display).
 - `editor.spec` — PyInstaller recipe for the one-file, self-contained executable.
 - `test_warehouse_map.py` — checks the model against the real `Magazyn.txt`: that the grid
   round-trips, that the distance matrix **equals** what `export.py` writes (and what it would
