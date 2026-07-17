@@ -1,0 +1,14 @@
+# .NET build output
+bin/
+obj/
+*.user
+
+# Python
+.venv/
+__pycache__/
+build/
+dist/
+
+# IDE
+.idea/
+.vs/
