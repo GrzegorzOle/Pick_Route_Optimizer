@@ -34,7 +34,31 @@ Key defaults:
 - `WarehouseRouteApi/Models/DTOs.cs` - request/response models
 - `WarehouseRouteApi/mapa_odleglosci.json` - matrix data
 
-## Requirements
+## Download (no .NET needed)
+
+Self-contained builds are on the [Releases page](../../releases) — a zip per OS containing a
+single-file server with the .NET runtime bundled inside, plus the distance map. Nothing to
+install.
+
+- **Windows:** `WarehouseRouteApi-windows-x64.zip`
+- **Linux:** `WarehouseRouteApi-linux-x64.zip`
+
+Unzip and run the executable from inside the unzipped folder (it reads `mapa_odleglosci.json`
+from the working directory). To point it at a port:
+
+```bash
+# Linux
+ASPNETCORE_URLS=http://localhost:5139 ./WarehouseRouteApi
+```
+```powershell
+# Windows
+$env:ASPNETCORE_URLS = "http://localhost:5139"; .\WarehouseRouteApi.exe
+```
+
+The map ships alongside the executable, so you can drop in a freshly generated
+`mapa_odleglosci.json` (from the MAP Editor or `export.py`) without rebuilding the server.
+
+## Requirements (from source)
 
 - .NET SDK 8 or newer
 
@@ -52,6 +76,21 @@ Based on `WarehouseRouteApi/Properties/launchSettings.json`, the HTTP profile us
 
 - `http://localhost:5139`
 - Swagger UI: `http://localhost:5139/swagger`
+
+## Packaging a self-contained build
+
+The release workflow ([`.github/workflows/release.yml`](../.github/workflows/release.yml))
+produces these on a `v*` tag. To build one yourself (`.NET` cross-publishes, so both targets
+build from either OS):
+
+```bash
+dotnet publish WarehouseRouteApi/WarehouseRouteApi.csproj \
+  -c Release -r linux-x64 --self-contained true \
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
+  -o publish            # then run ./publish/WarehouseRouteApi
+```
+
+Swap `-r win-x64` for the Windows executable.
 
 ## API
 
