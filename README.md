@@ -35,7 +35,9 @@ This repository contains two related projects that work together to generate a d
   cd WarehouseRouteApi/WarehouseRouteApi
   dotnet run
   ```
-  The API will be available at `http://localhost:5000` (or the port defined in `launchSettings.json`).
+  The API will be available at `http://localhost:5139`, with Swagger UI at `/swagger` (see `launchSettings.json`).
+
+See [`WarehouseRouteApi/readme.md`](WarehouseRouteApi/readme.md) for the full endpoint reference.
 
 ## Typical workflow
 1. **Generate the distance map**:
@@ -55,11 +57,24 @@ This repository contains two related projects that work together to generate a d
    ```
 4. **Request a route** (example using `curl`):
    ```bash
-   curl -X POST http://localhost:5000/api/route \
+   curl -X POST http://localhost:5139/api/route/optimal \
         -H "Content-Type: application/json" \
-        -d '{"start":"A1","end":"B5","items":["C3","D2"]}'
+        -d '{"startLocation":"A05","stopLocation":"M05","locations":["B04","C07"]}'
    ```
-   The response contains the optimal picking order.
+   The response contains the optimal picking order:
+   ```json
+   {
+     "startLocation": "A05",
+     "stopLocation": "M05",
+     "route": [
+       { "location": "B04", "distance": 2 },
+       { "location": "C07", "distance": 4 }
+     ],
+     "totalDistance": 20
+   }
+   ```
+   Each `distance` is the leg walked to reach that location. `route` omits the start and stop,
+   but `totalDistance` covers the whole walk — including the legs to the start and stop.
 
 ## Repository layout
 ```
