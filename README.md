@@ -1,6 +1,6 @@
 # Pick Route Optimizer
 
-This repository contains two related projects that work together to generate a distance matrix for a warehouse layout and to serve an API that can compute optimal picking routes.
+This repository contains three related projects that work together to build a distance matrix for a warehouse layout and serve an API that computes optimal picking routes.
 
 ![Warehouse layout](Img/magazyn.jpeg)
 
@@ -31,6 +31,20 @@ The server zip contains the executable plus `mapa_odleglosci.json`; unzip and ru
   ```
   The script produces `mapa_odleglosci.json` in the same directory.
 
+### `MAP_Editor`
+
+- **Purpose**: A graphical editor for the warehouse map — a safer alternative to hand‑editing `Magazyn.txt`, where a single misplaced character silently disconnects a location and only surfaces later as an unreachable slot.
+- **Key points**:
+  - Models the map as a graph, so it can add locations anywhere (including off the regular grid), rename, delete, and connect any two slots.
+  - Re‑checks reachability after every edit and highlights a cut‑off location in red at once.
+  - Exports `Magazyn.txt` for `export.py`, or generates `mapa_odleglosci.json` directly.
+- **How to run**:
+  ```bash
+  cd MAP_Editor
+  python editor.py
+  ```
+  Needs only Python 3 with Tkinter (both in the standard library). See [`MAP_Editor/README.md`](MAP_Editor/README.md).
+
 ### `WarehouseRouteApi`
 
 - **Purpose**: Exposes an HTTP API (ASP.NET Core) that uses Google OR‑Tools to solve the Vehicle Routing Problem (VRP) for picking routes inside the warehouse.
@@ -56,7 +70,7 @@ See [`WarehouseRouteApi/readme.md`](WarehouseRouteApi/readme.md) for the full en
    cd MAP_Generator
    python export.py
    ```
-   This creates `mapa_odleglosci.json`.
+   This creates `mapa_odleglosci.json`. Alternatively, edit the map in `MAP_Editor` and generate the distance map from there.
 2. **Copy the map to the API project** (if not automatically copied):
    ```bash
    cp MAP_Generator/mapa_odleglosci.json WarehouseRouteApi/WarehouseRouteApi/
@@ -94,6 +108,9 @@ Pick_Route_Optimizer/
 │   ├─ export.py
 │   ├─ Magazyn.txt          # Textual warehouse layout
 │   └─ mapa_odleglosci.json (generated)
+├─ MAP_Editor/             # Graphical editor for the warehouse map
+│   ├─ editor.py            # Tkinter UI
+│   └─ warehouse_map.py     # graph model (parsing, validation, JSON export)
 └─ WarehouseRouteApi/      # ASP.NET Core API using OR‑Tools
     └─ WarehouseRouteApi/   # Source code
         ├─ Controllers/
