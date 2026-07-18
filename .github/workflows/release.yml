@@ -116,6 +116,10 @@ jobs:
             -p:Version="$ver" \
             -o publish
 
+      - name: Bundle the end-user run instructions
+        shell: bash
+        run: cp dist-docs/README-server.md publish/README.md
+
       - name: Smoke-test the server (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -171,6 +175,13 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
+      # Check out first (only the release-notes template): actions/checkout cleans the
+      # workspace, so it must run before the artifacts land, or it would wipe them.
+      - name: Check out the release-notes template
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: dist-docs/RELEASE_NOTES.md
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -180,5 +191,6 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**
+          body_path: dist-docs/RELEASE_NOTES.md
           generate_release_notes: true
           fail_on_unmatched_files: true
